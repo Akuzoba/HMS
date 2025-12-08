@@ -285,6 +285,7 @@ model Drug {
   batches         DrugBatch[]
   inventoryLogs   DrugInventoryLog[]
   dispensings     DispensingItem[]
+  regimens        DrugRegimen[]
 
   @@index([drugCode])
   @@index([drugName])
@@ -920,4 +921,143 @@ model StockAlert {
   @@index([isResolved])
   @@index([createdAt])
   @@map("stock_alerts")
+}
+
+// =====================
+// CLINICAL DECISION SUPPORT
+// =====================
+
+// Drug Regimens - Pre-built prescription templates
+model DrugRegimen {
+  id              String    @id @default(uuid())
+  drugId          String?   // Optional - can link to drug catalog
+  drugName        String    // "Amoxicillin"
+  genericName     String?
+  strength        String    // "500mg"
+  dosageForm      String    // TABLET, CAPSULE, SYRUP, etc.
+  route           String    @default("ORAL") // ORAL, IV, IM, TOPICAL, etc.
+  frequency       String    // "TDS", "BD", "OD", "STAT", "PRN"
+  frequencyText   String    // "Three times daily", "Twice daily"
+  duration        Int?      // Duration in days
+  durationUnit    String    @default("days") // days, weeks, months
+  instructions    String?   // "Take after meals", "With plenty of water"
+  indication      String?   // "Bacterial infection", "Pain relief"
+  category        String?   // ANTIBIOTIC, ANALGESIC, ANTIMALARIAL, etc.
+  ageGroup        String?   // ADULT, PEDIATRIC, GERIATRIC, ALL
+  searchTerms     String?   @db.Text // Comma-separated search terms for autocomplete
+  displayText     String    // "Amoxicillin 500mg TDS x 5 days"
+  usageCount      Int       @default(0) // For ranking popular regimens
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  drug            Drug?     @relation(fields: [drugId], references: [id])
+
+  @@index([drugName])
+  @@index([category])
+  @@index([indication])
+  @@index([usageCount])
+  @@map("drug_regimens")
+}
+
+// ICD-10 Diagnosis Codes with autocomplete support
+model DiagnosisCode {
+  id              String    @id @default(uuid())
+  icdCode         String    @unique // "A01.0", "J18.9"
+  shortCode       String?   // Short version for quick entry
+  description     String    // "Typhoid fever"
+  longDescription String?   @db.Text
+  category        String?   // Infectious, Respiratory, etc.
+  searchTerms     String?   @db.Text // "typhoid, enteric fever, salmonella"
+  commonName      String?   // Lay term: "Typhoid"
+  usageCount      Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  @@index([icdCode])
+  @@index([description])
+  @@index([category])
+  @@index([usageCount])
+  @@map("diagnosis_codes")
+}
+
+// Lab Test Catalog with smart autocomplete
+model LabTestCatalog {
+  id              String    @id @default(uuid())
+  testCode        String    @unique
+  testName        String    // "Full Blood Count"
+  shortName       String?   // "FBC"
+  category        String?   // HEMATOLOGY, BIOCHEMISTRY, MICROBIOLOGY, etc.
+  sampleType      String?   // BLOOD, URINE, STOOL, SWAB, etc.
+  containerType   String?   // EDTA, Plain, Lithium Heparin, etc.
+  turnaroundTime  Int?      // Expected TAT in hours
+  instructions    String?   // "Fasting required"
+  normalRange     String?   @db.Text // JSON with ranges by age/gender
+  price           Float     @default(0)
+  searchTerms     String?   @db.Text // "fbc, cbc, complete blood count, hemogram"
+  usageCount      Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  @@index([testCode])
+  @@index([testName])
+  @@index([category])
+  @@index([usageCount])
+  @@map("lab_test_catalog")
+}
+
+// Clinical Sentence Templates for History Taking
+model ClinicalTemplate {
+  id              String    @id @default(uuid())
+  templateType    String    // HISTORY, EXAMINATION, PLAN
+  category        String    // Chief complaint category: FEVER, PAIN, COUGH, etc.
+  templateName    String    // "Fever History Template"
+  template        String    @db.Text // "Patient presents with {symptom} for {duration} {unit}. Associated with {associations}. {negatives}"
+  placeholders    Json      // Array of placeholder definitions with options
+  defaultValues   Json?     // Default values for placeholders
+  outputFormat    String    @default("TEXT") // TEXT, STRUCTURED
+  sortOrder       Int       @default(0)
+  usageCount      Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([templateType])
+  @@index([category])
+  @@index([usageCount])
+  @@map("clinical_templates")
+}
+
+// Physical Examination Sections - Dynamic based on complaint
+model ExamSection {
+  id              String    @id @default(uuid())
+  sectionName     String    // "Cardiovascular Examination"
+  sectionCode     String    @unique // CVS, RESP, ABDO, NEURO, etc.
+  description     String?
+  fields          Json      // Array of exam fields with types
+  defaultFindings String?   @db.Text // Default normal findings text
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  
+  triggers        ExamTrigger[]
+
+  @@index([sectionCode])
+  @@map("exam_sections")
+}
+
+// Mapping between Chief Complaints and Exam Sections
+model ExamTrigger {
+  id              String    @id @default(uuid())
+  chiefComplaint  String    // "Chest Pain", "Shortness of Breath"
+  examSectionId   String
+  priority        Int       @default(1) // 1 = Primary, 2 = Secondary
+  isRequired      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  examSection     ExamSection @relation(fields: [examSectionId], references: [id])
+
+  @@unique([chiefComplaint, examSectionId])
+  @@index([chiefComplaint])
+  @@map("exam_triggers")
 }

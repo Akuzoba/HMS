@@ -11,8 +11,22 @@ const controller = new PatientController();
 router.use(authenticate);
 
 /**
+ * @route   POST /api/patients/check-duplicates
+ * @desc    Check for potential duplicate patients before registration (MPI)
+ * @access  Front Desk, Admin
+ */
+router.post('/check-duplicates', authorize('FRONT_DESK', 'ADMIN'), controller.checkDuplicates);
+
+/**
+ * @route   GET /api/patients/fuzzy-search
+ * @desc    Advanced fuzzy search for patients using MPI algorithms
+ * @access  All authenticated users
+ */
+router.get('/fuzzy-search', controller.fuzzySearch);
+
+/**
  * @route   POST /api/patients
- * @desc    Register a new patient
+ * @desc    Register a new patient (with MPI duplicate detection)
  * @access  Front Desk, Admin
  */
 router.post('/', authorize('FRONT_DESK', 'ADMIN'), validate(createPatientSchema), controller.create);

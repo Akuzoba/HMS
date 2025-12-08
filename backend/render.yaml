@@ -1,0 +1,5 @@
+# Build command
+npm install && npx prisma generate
+
+# Start command  
+npm start

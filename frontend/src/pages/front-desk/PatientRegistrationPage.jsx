@@ -11,7 +11,10 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { usePatientStore } from '@/store/patientStore';
 import { useVisitStore } from '@/store/visitStore';
-import { ArrowLeft, Save, UserPlus, ClipboardList, CheckCircle, Copy } from 'lucide-react';
+import { 
+  ArrowLeft, Save, UserPlus, ClipboardList, CheckCircle, Copy, 
+  AlertTriangle, Users, Calendar, Phone, ChevronDown, ChevronUp 
+} from 'lucide-react';
 
 const patientSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -35,14 +38,18 @@ const patientSchema = z.object({
 
 export default function PatientRegistrationPage() {
   const navigate = useNavigate();
-  const createPatient = usePatientStore((state) => state.createPatient);
+  const { createPatient, clearDuplicateCheck, potentialDuplicates } = usePatientStore();
   const { createVisit } = useVisitStore();
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [registeredPatient, setRegisteredPatient] = useState(null);
   const [addingToQueue, setAddingToQueue] = useState(false);
   const [visitType, setVisitType] = useState('OPD');
   const [chiefComplaint, setChiefComplaint] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [pendingPatientData, setPendingPatientData] = useState(null);
+  const [expandedMatch, setExpandedMatch] = useState(null);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(patientSchema)
@@ -81,7 +88,37 @@ export default function PatientRegistrationPage() {
     setShowSuccessModal(false);
     setRegisteredPatient(null);
     setChiefComplaint('');
+    setDuplicateWarning(null);
+    setPendingPatientData(null);
+    clearDuplicateCheck();
     reset();
+  };
+
+  // Handle proceeding despite duplicate warning
+  const handleProceedAnyway = async () => {
+    if (!pendingPatientData) return;
+    
+    setLoading(true);
+    setShowDuplicateModal(false);
+    
+    const result = await createPatient(pendingPatientData, true); // confirmNotDuplicate = true
+    setLoading(false);
+
+    if (result.success && !result.isDuplicateWarning) {
+      setRegisteredPatient(result.data);
+      setShowSuccessModal(true);
+      setPendingPatientData(null);
+      setDuplicateWarning(null);
+      clearDuplicateCheck();
+    } else {
+      toast.error(result.error || 'Failed to register patient');
+    }
+  };
+
+  // Navigate to existing patient
+  const handleUseExistingPatient = (patient) => {
+    setShowDuplicateModal(false);
+    navigate(`/patients/${patient.id}`);
   };
 
   const onSubmit = async (data) => {
@@ -95,6 +132,14 @@ export default function PatientRegistrationPage() {
 
     const result = await createPatient(formattedData);
     setLoading(false);
+
+    // Check for duplicate warning
+    if (result.isDuplicateWarning || result.isDuplicateError) {
+      setPendingPatientData(formattedData);
+      setDuplicateWarning(result.duplicateCheck);
+      setShowDuplicateModal(true);
+      return;
+    }
 
     if (result.success) {
       setRegisteredPatient(result.data);
@@ -450,6 +495,197 @@ export default function PatientRegistrationPage() {
             </button>
           </div>
         )}
+      </Modal>
+
+      {/* Duplicate Warning Modal */}
+      <Modal
+        isOpen={showDuplicateModal}
+        onClose={() => {
+          setShowDuplicateModal(false);
+          setPendingPatientData(null);
+        }}
+        title=""
+        size="lg"
+      >
+        <div className="space-y-5">
+          {/* Warning Header */}
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="h-16 w-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <AlertTriangle size={32} className="text-amber-600" />
+            </motion.div>
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">
+              Potential Duplicate Patient Found
+            </h3>
+            <p className="text-neutral-600">
+              {duplicateWarning?.message || 'We found patients with similar information in the system.'}
+            </p>
+          </div>
+
+          {/* Match Summary */}
+          {duplicateWarning && (
+            <div className="flex justify-center gap-4 text-sm">
+              {duplicateWarning.definiteMatchCount > 0 && (
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium">
+                  {duplicateWarning.definiteMatchCount} Definite Match{duplicateWarning.definiteMatchCount > 1 ? 'es' : ''}
+                </span>
+              )}
+              {duplicateWarning.probableMatchCount > 0 && (
+                <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
+                  {duplicateWarning.probableMatchCount} Probable Match{duplicateWarning.probableMatchCount > 1 ? 'es' : ''}
+                </span>
+              )}
+              {duplicateWarning.possibleMatchCount > 0 && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                  {duplicateWarning.possibleMatchCount} Possible Match{duplicateWarning.possibleMatchCount > 1 ? 'es' : ''}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Potential Matches List */}
+          <div className="max-h-80 overflow-y-auto space-y-3">
+            {duplicateWarning?.matches?.map((match, index) => (
+              <div
+                key={match.patient.id}
+                className={`border rounded-lg p-4 transition-all ${
+                  match.confidence === 'DEFINITE_MATCH' 
+                    ? 'border-red-300 bg-red-50' 
+                    : match.confidence === 'PROBABLE_MATCH'
+                    ? 'border-amber-300 bg-amber-50'
+                    : 'border-blue-300 bg-blue-50'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center border">
+                        <Users size={20} className="text-neutral-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-neutral-900">
+                          {match.patient.firstName} {match.patient.middleName} {match.patient.lastName}
+                        </h4>
+                        <p className="text-sm text-neutral-600 font-mono">
+                          {match.patient.patientNumber}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-neutral-600">
+                        <Calendar size={14} />
+                        <span>
+                          {match.patient.dateOfBirth 
+                            ? new Date(match.patient.dateOfBirth).toLocaleDateString()
+                            : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-neutral-600">
+                        <Phone size={14} />
+                        <span>{match.patient.phoneNumber || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {match.patient.lastVisit && (
+                      <p className="mt-2 text-xs text-neutral-500">
+                        Last visit: {new Date(match.patient.lastVisit.visitDate).toLocaleDateString()} ({match.patient.lastVisit.visitType})
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    <div className={`text-2xl font-bold ${
+                      match.score >= 95 ? 'text-red-600' :
+                      match.score >= 80 ? 'text-amber-600' :
+                      'text-blue-600'
+                    }`}>
+                      {match.score}%
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      match.confidence === 'DEFINITE_MATCH' 
+                        ? 'bg-red-200 text-red-800' 
+                        : match.confidence === 'PROBABLE_MATCH'
+                        ? 'bg-amber-200 text-amber-800'
+                        : 'bg-blue-200 text-blue-800'
+                    }`}>
+                      {match.confidence.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Expandable Match Details */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedMatch(expandedMatch === index ? null : index)}
+                  className="mt-3 text-xs text-neutral-500 hover:text-neutral-700 flex items-center gap-1"
+                >
+                  {expandedMatch === index ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {expandedMatch === index ? 'Hide' : 'Show'} match details
+                </button>
+
+                {expandedMatch === index && match.breakdown && (
+                  <div className="mt-2 p-2 bg-white/50 rounded text-xs space-y-1">
+                    {Object.entries(match.breakdown).map(([field, score]) => (
+                      <div key={field} className="flex justify-between">
+                        <span className="text-neutral-600 capitalize">{field.replace(/([A-Z])/g, ' $1')}</span>
+                        <span className={`font-medium ${score >= 80 ? 'text-green-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                          {score}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Use This Patient Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={() => handleUseExistingPatient(match.patient)}
+                >
+                  Use This Patient Record
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDuplicateModal(false);
+                setPendingPatientData(null);
+              }}
+            >
+              Cancel Registration
+            </Button>
+            <Button
+              type="button"
+              variant={duplicateWarning?.definiteMatchCount > 0 ? 'danger' : 'primary'}
+              className="flex-1"
+              onClick={handleProceedAnyway}
+              loading={loading}
+            >
+              {duplicateWarning?.definiteMatchCount > 0 
+                ? 'Create Anyway (Not Recommended)'
+                : 'Create New Patient'}
+            </Button>
+          </div>
+
+          {duplicateWarning?.definiteMatchCount > 0 && (
+            <p className="text-xs text-red-600 text-center">
+              ⚠️ Creating a duplicate record may cause data inconsistency issues
+            </p>
+          )}
+        </div>
       </Modal>
     </div>
   );

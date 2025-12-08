@@ -23,6 +23,7 @@ import labRoutes from './modules/labs/routes.js';
 import billingRoutes from './modules/billing/routes.js';
 import serviceRoutes from './modules/services/routes.js';
 import ipdRoutes from './modules/ipd/routes.js';
+import clinicalTemplatesRoutes from './modules/clinical-templates/routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/labs', labRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/ipd', ipdRoutes);
+app.use('/api/clinical-templates', clinicalTemplatesRoutes);
 
 // =====================
 // ERROR HANDLING

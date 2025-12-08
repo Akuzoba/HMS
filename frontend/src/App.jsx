@@ -13,6 +13,7 @@ import PatientLookupPage from './pages/front-desk/PatientLookupPage';
 import PatientProfilePage from './pages/patients/PatientProfilePage';
 import TriagePage from './pages/triage/TriagePage';
 import ConsultationPage from './pages/doctor/ConsultationPage';
+import ConsultationPageV2 from './pages/doctor/ConsultationPageV2';
 import PharmacyPage from './pages/pharmacy/PharmacyPage';
 import LabPage from './pages/lab/LabPage';
 import BillingPage from './pages/billing/BillingPage';
@@ -88,6 +89,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['DOCTOR', 'ADMIN']}>
               <ConsultationPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Enhanced Consultation with Smart Templates */}
+        <Route
+          path="/consultation-v2"
+          element={
+            <ProtectedRoute allowedRoles={['DOCTOR', 'ADMIN']}>
+              <ConsultationPageV2 />
             </ProtectedRoute>
           }
         />
