@@ -131,9 +131,6 @@ export const usePatientStore = create((set, get) => ({
       return { success: false, error: message };
     }
   },
-      return { success: false, error: message };
-    }
-  },
 
   getPatientById: async (id) => {
     set({ isLoading: true, error: null });

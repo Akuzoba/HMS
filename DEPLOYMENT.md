@@ -9,10 +9,12 @@
 2. **Create a new project** → "Deploy from GitHub repo"
 
 3. **Add PostgreSQL:**
+
    - Click "New" → "Database" → "PostgreSQL"
    - Railway auto-creates `DATABASE_URL`
 
 4. **Deploy Backend:**
+
    - Click "New" → "GitHub Repo" → Select your repo
    - Set root directory: `backend`
    - Add environment variables:
@@ -24,6 +26,7 @@
      ```
 
 5. **Deploy Frontend:**
+
    - Click "New" → "GitHub Repo" → Select same repo
    - Set root directory: `frontend`
    - Add environment variable:
@@ -81,7 +84,7 @@ Create this file at the project root:
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -134,6 +137,7 @@ volumes:
 ## Environment Variables Reference
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/hms
 JWT_SECRET=generate-a-64-char-random-string
@@ -143,6 +147,7 @@ PORT=3000
 ```
 
 ### Frontend (.env)
+
 ```env
 VITE_API_URL=https://api.yourdomain.com/api
 ```
