@@ -1,12 +1,19 @@
 import { ConsultationRepository } from './repository.js';
 import { AppError } from '../../core/middleware/errorHandler.js';
 import { autoChargeService } from '../services/chargeService.js';
+import prisma from '../../core/database/prisma.js';
 
 const consultationRepository = new ConsultationRepository();
 
 export class ConsultationService {
   async createConsultation(data) {
     const consultation = await consultationRepository.create(data);
+    
+    // Mark consultation as completed for this visit
+    await prisma.visit.update({
+      where: { id: data.visitId },
+      data: { consultationCompleted: true },
+    });
     
     // Auto-charge for consultation
     try {

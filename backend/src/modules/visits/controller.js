@@ -37,6 +37,62 @@ export class VisitController {
     });
   }
 
+  async getNurseVisits(req, res) {
+    const { page, limit } = req.query;
+    const result = await visitService.getNurseVisits({
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+    
+    res.json({
+      success: true,
+      data: result.visits,
+      pagination: result.pagination,
+    });
+  }
+
+  async getDoctorVisits(req, res) {
+    const { page, limit } = req.query;
+    const result = await visitService.getDoctorVisits({
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+    
+    res.json({
+      success: true,
+      data: result.visits,
+      pagination: result.pagination,
+    });
+  }
+
+  async getPharmacyVisits(req, res) {
+    const { page, limit } = req.query;
+    const result = await visitService.getPharmacyVisits({
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+    
+    res.json({
+      success: true,
+      data: result.visits,
+      pagination: result.pagination,
+    });
+  }
+
+  async getLabVisits(req, res) {
+    const { page, limit } = req.query;
+    const result = await visitService.getLabVisits({
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+    
+    res.json({
+      success: true,
+      data: result.visits,
+      pagination: result.pagination,
+    });
+  }
+
   async updateVisit(req, res) {
     const visit = await visitService.updateVisit(req.params.id, req.body);
     res.json({

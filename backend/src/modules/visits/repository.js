@@ -71,17 +71,53 @@ export class VisitRepository {
   }
 
   async findMany(filters = {}) {
-    const { patientId, status, visitType, page = 1, limit = 20 } = filters;
+    const { 
+      patientId, 
+      status, 
+      visitType, 
+      page = 1, 
+      limit = 20,
+      excludeStatuses,
+      vitalsCompleted,
+      consultationCompleted,
+      prescriptionCompleted,
+      labOrderCompleted,
+      hasLabOrders,
+    } = filters;
     
     const where = {};
 
     if (patientId) where.patientId = patientId;
+    
     if (status) {
       // Handle comma-separated status values
       const statusArray = status.split(',').map(s => s.trim());
       where.status = statusArray.length > 1 ? { in: statusArray } : status;
     }
+    
+    // Exclude certain statuses (for concurrent workflow)
+    if (excludeStatuses && excludeStatuses.length > 0) {
+      where.status = { notIn: excludeStatuses };
+    }
+    
     if (visitType) where.visitType = visitType;
+    
+    // Completion tracking filters
+    if (vitalsCompleted !== undefined) where.vitalsCompleted = vitalsCompleted;
+    if (consultationCompleted !== undefined) where.consultationCompleted = consultationCompleted;
+    if (prescriptionCompleted !== undefined) where.prescriptionCompleted = prescriptionCompleted;
+    if (labOrderCompleted !== undefined) where.labOrderCompleted = labOrderCompleted;
+    
+    // Filter for visits with lab orders
+    if (hasLabOrders) {
+      where.consultations = {
+        some: {
+          labOrders: {
+            some: {},
+          },
+        },
+      };
+    }
 
     const [visits, total] = await Promise.all([
       prisma.visit.findMany({
@@ -94,10 +130,27 @@ export class VisitRepository {
           },
           consultations: {
             include: {
+              doctor: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                },
+              },
               labOrders: {
                 where: { status: 'COMPLETED' },
                 include: {
                   results: true,
+                },
+              },
+              prescriptions: {
+                include: {
+                  items: {
+                    include: {
+                      drug: true,
+                    },
+                  },
                 },
               },
             },

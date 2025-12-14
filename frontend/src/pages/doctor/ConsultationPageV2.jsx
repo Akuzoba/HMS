@@ -40,6 +40,7 @@ import { usePrescriptionStore, usePharmacyStore } from '../../store/prescription
 import { useLabStore } from '../../store/labStore';
 import { useConsultationUIStore } from '../../store/consultationUIStore';
 import { toast } from 'sonner';
+import VisitStatusBadge from '../../components/visits/VisitStatusBadge';
 
 // Import enhanced components
 import { EnhancedConsultationForm, EnhancedPrescriptionModal } from '../../components/doctor';
@@ -58,7 +59,7 @@ const consultationSchema = z.object({
 });
 
 export default function ConsultationPageV2() {
-  const { visits, listVisits, updateVisit } = useVisitStore();
+  const { visits, getDoctorQueue, updateVisit } = useVisitStore();
   const { vitals, getVisitVitals } = useVitalStore();
   const { createConsultation, updateConsultation, loading, error } = useConsultationStore();
   const { createPrescription, loading: prescriptionLoading } = usePrescriptionStore();
@@ -97,12 +98,12 @@ export default function ConsultationPageV2() {
 
   const visitId = watch('visitId');
 
-  // Load visits
+  // Load active visits for doctor station
   useEffect(() => {
-    listVisits({ status: 'WITH_DOCTOR,IN_PROGRESS' });
+    getDoctorQueue();
     listLabTests();
     listDrugs();
-  }, [listVisits, listLabTests, listDrugs]);
+  }, [getDoctorQueue, listLabTests, listDrugs]);
 
   // Update selected visit
   useEffect(() => {
@@ -354,30 +355,74 @@ export default function ConsultationPageV2() {
             </div>
 
             {/* Quick Actions */}
-            {currentConsultationId && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-2">
-                <h3 className="font-semibold text-gray-900 text-sm mb-3">Quick Actions</h3>
-                <button
-                  onClick={() => setShowPrescriptionModal(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 rounded-xl text-green-700 transition-colors"
-                >
-                  <Pill className="w-5 h-5" />
-                  <span className="font-medium">Add Prescription</span>
-                </button>
-                <button
-                  onClick={() => setShowLabOrderForm(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-xl text-purple-700 transition-colors"
-                >
-                  <FlaskConical className="w-5 h-5" />
-                  <span className="font-medium">Order Labs</span>
-                </button>
-                <button
-                  onClick={() => setShowRouteModal(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-xl text-blue-700 transition-colors"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                  <span className="font-medium">Route Patient</span>
-                </button>
+            {selectedVisit && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+                  <h3 className="font-semibold text-gray-900 text-sm">Quick Actions</h3>
+                </div>
+                <div className="p-4 space-y-2">
+                  {!currentConsultationId && (
+                    <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-800">
+                        💡 Save consultation first to enable actions
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!currentConsultationId) {
+                        toast.error('Please save consultation first');
+                        return;
+                      }
+                      setShowPrescriptionModal(true);
+                    }}
+                    disabled={!currentConsultationId}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      currentConsultationId
+                        ? 'bg-green-50 hover:bg-green-100 text-green-700 cursor-pointer'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Pill className="w-5 h-5" />
+                    <span className="font-medium">Add Prescription</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!currentConsultationId) {
+                        toast.error('Please save consultation first');
+                        return;
+                      }
+                      setShowLabOrderForm(true);
+                    }}
+                    disabled={!currentConsultationId}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      currentConsultationId
+                        ? 'bg-purple-50 hover:bg-purple-100 text-purple-700 cursor-pointer'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <FlaskConical className="w-5 h-5" />
+                    <span className="font-medium">Order Labs</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!currentConsultationId) {
+                        toast.error('Please save consultation first');
+                        return;
+                      }
+                      setShowRouteModal(true);
+                    }}
+                    disabled={!currentConsultationId}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      currentConsultationId
+                        ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                    <span className="font-medium">Route Patient</span>
+                  </button>
+                </div>
               </div>
             )}
 

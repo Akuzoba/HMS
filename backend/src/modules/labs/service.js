@@ -1,6 +1,7 @@
 import { LabRepository } from './repository.js';
 import { AppError } from '../../core/middleware/errorHandler.js';
 import { autoChargeService } from '../services/chargeService.js';
+import prisma from '../../core/database/prisma.js';
 
 const labRepository = new LabRepository();
 
@@ -171,7 +172,18 @@ export class LabService {
     if (order.results.length === 0) {
       throw new AppError('No results to verify', 400);
     }
-    return labRepository.verifyAllResultsForOrder(labOrderId, verifiedBy);
+    
+    const verified = await labRepository.verifyAllResultsForOrder(labOrderId, verifiedBy);
+    
+    // Mark lab order as completed for the visit
+    if (order.consultation?.visitId) {
+      await prisma.visit.update({
+        where: { id: order.consultation.visitId },
+        data: { labOrderCompleted: true },
+      });
+    }
+    
+    return verified;
   }
 
   async getPatientLabHistory(patientId) {

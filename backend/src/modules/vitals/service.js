@@ -1,5 +1,6 @@
 import { VitalRepository } from './repository.js';
 import { AppError } from '../../core/middleware/errorHandler.js';
+import prisma from '../../core/database/prisma.js';
 
 const vitalRepository = new VitalRepository();
 
@@ -11,7 +12,15 @@ export class VitalService {
       data.bmi = (data.weight / (heightInMeters * heightInMeters)).toFixed(1);
     }
 
-    return vitalRepository.create(data);
+    const vital = await vitalRepository.create(data);
+    
+    // Mark vitals as completed for this visit
+    await prisma.visit.update({
+      where: { id: data.visitId },
+      data: { vitalsCompleted: true },
+    });
+    
+    return vital;
   }
 
   async getVitalById(id) {

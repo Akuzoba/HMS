@@ -52,14 +52,22 @@ export class PrescriptionService {
     try {
       const dispensed = await prescriptionRepository.dispense(id, dispensedBy, dispensedData);
       
+      // Get consultation to find visitId
+      const consultation = await prisma.consultation.findUnique({
+        where: { id: prescription.consultationId },
+        select: { visitId: true }
+      });
+      
+      // Mark prescription as completed for this visit
+      if (consultation?.visitId) {
+        await prisma.visit.update({
+          where: { id: consultation.visitId },
+          data: { prescriptionCompleted: true },
+        });
+      }
+      
       // Auto-charge for dispensed medications
       try {
-        // Get visitId from consultation
-        const consultation = await prisma.consultation.findUnique({
-          where: { id: prescription.consultationId },
-          select: { visitId: true }
-        });
-        
         if (consultation?.visitId && dispensed.items) {
           await autoChargeService.chargePrescription(
             consultation.visitId,

@@ -116,6 +116,13 @@ model Visit {
   visitDate     DateTime  @default(now())
   status        String    @default("CHECKED_IN") // CHECKED_IN, IN_TRIAGE, WITH_DOCTOR, WITH_LAB, WITH_PHARMACY, BILLING, COMPLETED, CANCELLED
   chiefComplaint String?  @db.Text
+  
+  // Completion tracking for concurrent workflow
+  vitalsCompleted        Boolean @default(false)
+  consultationCompleted  Boolean @default(false)
+  prescriptionCompleted  Boolean @default(false)
+  labOrderCompleted      Boolean @default(false)
+  
   closedAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -130,6 +137,8 @@ model Visit {
   @@index([patientId])
   @@index([visitDate])
   @@index([status])
+  @@index([vitalsCompleted])
+  @@index([consultationCompleted])
   @@map("visits")
 }
 

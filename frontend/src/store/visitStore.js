@@ -107,6 +107,70 @@ export const useVisitStore = create((set, get) => ({
     }
   },
 
+  // Get nurse queue (all active visits)
+  getNurseQueue: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get('/visits/nurse/queue', { params });
+      set({
+        visits: response.data.data,
+        loading: false,
+      });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  // Get doctor queue (all active visits)
+  getDoctorQueue: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get('/visits/doctor/queue', { params });
+      set({
+        visits: response.data.data,
+        loading: false,
+      });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  // Get pharmacy queue (has consultation, needs prescription)
+  getPharmacyQueue: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get('/visits/pharmacy/queue', { params });
+      set({
+        visits: response.data.data,
+        loading: false,
+      });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  // Get lab queue (has lab order, not completed)
+  getLabQueue: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get('/visits/lab/queue', { params });
+      set({
+        visits: response.data.data,
+        loading: false,
+      });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
   // Reset state
   reset: () => {
     set({

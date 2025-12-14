@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useVisitStore } from '../../store/visitStore';
 import { useVitalStore } from '../../store/vitalStore';
 import { useAuthStore } from '../../store/authStore';
+import VisitStatusBadge from '../../components/visits/VisitStatusBadge';
 import { 
   Stethoscope, Heart, Thermometer, Scale, Ruler, Wind, Droplets,
   Activity, User, Clock, ArrowRight, CheckCircle, X, Search,
@@ -68,7 +69,7 @@ const vitalSchema = z.object({
 
 export default function TriagePage() {
   const { user } = useAuthStore();
-  const { visits, listVisits, updateVisit } = useVisitStore();
+  const { visits, getNurseQueue, updateVisit } = useVisitStore();
   const { recordVitals, loading, error } = useVitalStore();
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -108,10 +109,10 @@ export default function TriagePage() {
       ? (weight / Math.pow(height / 100, 2)).toFixed(1)
       : null;
 
-  // Load pending visits (CHECKED_IN = just arrived, IN_TRIAGE = being processed)
+  // Load active visits for nurse station (concurrent workflow)
   useEffect(() => {
-    listVisits({ status: 'CHECKED_IN,IN_TRIAGE' });
-  }, [listVisits]);
+    getNurseQueue();
+  }, [getNurseQueue]);
 
   // Update selected visit
   useEffect(() => {
@@ -274,14 +275,11 @@ export default function TriagePage() {
                             "{visit.chiefComplaint}"
                           </p>
                         )}
+                        {/* Status indicators */}
+                        <div className="mt-2">
+                          <VisitStatusBadge visit={visit} />
+                        </div>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        visit.status === 'CHECKED_IN'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {visit.status === 'CHECKED_IN' ? 'Waiting' : 'In Triage'}
-                      </span>
                     </div>
                   </motion.div>
                 ))}

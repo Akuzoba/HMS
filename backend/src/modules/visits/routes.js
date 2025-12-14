@@ -18,6 +18,31 @@ router.post(
   visitController.createVisit.bind(visitController)
 );
 
+// Station-specific visit lists (concurrent workflow)
+router.get(
+  '/nurse/queue',
+  authorize('NURSE', 'ADMIN'),
+  visitController.getNurseVisits.bind(visitController)
+);
+
+router.get(
+  '/doctor/queue',
+  authorize('DOCTOR', 'ADMIN'),
+  visitController.getDoctorVisits.bind(visitController)
+);
+
+router.get(
+  '/pharmacy/queue',
+  authorize('PHARMACIST', 'ADMIN'),
+  visitController.getPharmacyVisits.bind(visitController)
+);
+
+router.get(
+  '/lab/queue',
+  authorize('LAB_TECH', 'ADMIN'),
+  visitController.getLabVisits.bind(visitController)
+);
+
 // List visits
 router.get(
   '/',
